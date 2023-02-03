@@ -4,6 +4,7 @@
   remote_user: root
   roles:
     - swap
+    - monitoring
     - docker
     - swarm-manager
 
@@ -12,5 +13,6 @@
   remote_user: root
   roles:
     - swap
+    - monitoring
     - docker
     - swarm-worker
