@@ -6,7 +6,7 @@ on:
       - release
 
 jobs:
-  lint_ansible:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -15,3 +15,10 @@ jobs:
 
       - name: Run ansible-lint
         uses: ansible/ansible-lint-action@main
+      - name: Run yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          config_data: "{extends: relaxed, rules: {line-length: disable}}"
+          strict: true
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
