@@ -1,0 +1,27 @@
+name: Publish Changelog
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  publish_changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v2
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit changelog (cron)
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "chore(release): publish latest changelog, `GithubCI`"
+          branch: ${{ github.head_ref }}

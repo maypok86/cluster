@@ -1,0 +1,4 @@
+- name: Create deploy user
+  ansible.builtin.import_tasks: create_user.yml
+- name: Init swarm
+  ansible.builtin.import_tasks: init_swarm.yml

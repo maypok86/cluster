@@ -1,0 +1,9 @@
+---
+- name: Create deploy user
+  ansible.builtin.user:
+    name: deploy
+    password: '!'
+    groups:
+      - docker
+    shell: /bin/bash
+    state: present
