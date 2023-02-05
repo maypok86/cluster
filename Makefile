@@ -20,6 +20,7 @@ cluster:
 deploy:
 	cd traefik && bash deploy.sh ${HOST} ${PORT} && cd ..
 	cd cron && bash deploy.sh ${HOST} ${PORT} && cd ..
+	cd redis && bash deploy.sh ${HOST} ${PORT} && cd ..
 
 .PHONY: build
 build: build-redis

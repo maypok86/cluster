@@ -1,0 +1,19 @@
+version: '3.9'
+services:
+  cluster-redis:
+    image: ${REGISTRY}/cluster-redis:${IMAGE_TAG}
+    volumes:
+      - cluster-redis:/data
+    environment:
+      - REDIS_PASSWORD
+    command:
+      - 'redis-server'
+      - '--maxmemory 32mb'
+      - '--maxmemory-policy allkeys-lru'
+    deploy:
+      placement:
+        constraints: [node.labels.db == db]
+      endpoint_mode: dnsrr
+
+volumes:
+  cluster-redis:
