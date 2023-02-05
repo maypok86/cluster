@@ -20,3 +20,17 @@ cluster:
 deploy:
 	cd traefik && bash deploy.sh ${HOST} ${PORT} && cd ..
 	cd cron && bash deploy.sh ${HOST} ${PORT} && cd ..
+
+.PHONY: build
+build: build-redis
+
+.PHONY: build-redis
+build-redis:
+	docker --log-level=debug build --pull -f docker/production/redis/Dockerfile -t ${REGISTRY}/cluster-redis:${IMAGE_TAG} docker/production/redis
+
+.PHONY: push
+push: push-redis
+
+.PHONY: push-redis
+push-redis:
+	docker push ${REGISTRY}/cluster-redis:${IMAGE_TAG}
