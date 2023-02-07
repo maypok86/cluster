@@ -10,10 +10,11 @@ services:
       - 'redis-server'
       - '--maxmemory 32mb'
       - '--maxmemory-policy allkeys-lru'
+    ports:
+      - '6379:6379'
     deploy:
       placement:
         constraints: [node.labels.db == db]
-      endpoint_mode: dnsrr
 
 volumes:
   cluster-redis:
