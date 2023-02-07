@@ -2,7 +2,7 @@ name: Deploy cluster
 
 on:
   workflow_run:
-    workflows: ["Lint", "Build and Push docker images"]
+    workflows: ["Lint"]
     types:
       - completed
     branches: [main]
@@ -22,18 +22,8 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           known_hosts: ${{ secrets.DEPLOY_HOST }}
 
-      - name: Inject branch slug
-        uses: rlespinasse/github-slug-action@v2.x
-
-      - name: Set image tag
-        run: echo "IMAGE_TAG=${{ env.GITHUB_REF_SLUG }}" >> $GITHUB_ENV
-
       - name: Deploy cluster
         run: make deploy
         env:
-          DOCKER_REGISTRY: ${{ env.REGISTRY }}
-          DOCKER_USERNAME: ${{ github.repository_owner }}
-          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           HOST: ${{ secrets.DEPLOY_HOST }}
           PORT: ${{ secrets.DEPLOY_PORT }}
-          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
