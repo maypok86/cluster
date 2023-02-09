@@ -3,16 +3,17 @@ services:
   cluster-traefik:
     image: traefik:2.8
     command:
-      --providers.docker=true
-      --providers.docker.watch=true
-      --providers.docker.swarmmode=true
-      --providers.docker.exposedbydefault=false
-      --entrypoints.http.address=:80
-      --entrypoints.https.address=:443
-      --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http
-      --certificatesresolvers.letsencrypt.acme.email=alex.mayshev.86@gmail.com
-      --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.watch=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entryPoints.http.address=:80"
+      - "--entryPoints.https.address=:443"
+      - "--certificatesresolvers.letsEncrypt.acme.httpChallenge=true"
+      - "--certificatesresolvers.letsEncrypt.acme.httpChallenge.entryPoint=http"
+      - "--certificatesresolvers.letsEncrypt.acme.email=alex.mayshev.86@gmail.com"
+      - "--certificatesresolvers.letsEncrypt.acme.storage=/certs/acme.json"
     ports:
       - target: 80
         published: 80
@@ -29,17 +30,30 @@ services:
       - traefik-public-certs:/certs
     deploy:
       labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik-public
-        - traefik.http.services.traefik.loadbalancer.server.port=80
-        - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
-        - traefik.http.routers.http-catchall.entrypoints=http
-        - traefik.http.routers.http-catchall.middlewares=redirect-to-https
-        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-        - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true
-        - traefik.http.middlewares.secure-headers.headers.sslRedirect=true
-        - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
-        - traefik.http.middlewares.secure-headers.headers.contentSecurityPolicy=block-all-mixed-content
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-public"
+
+        - "traefik.http.middlewares.redirect-to-https.redirectScheme.scheme=https"
+        - "traefik.http.middlewares.redirect-to-https.redirectScheme.permanent=true"
+
+        - "traefik.http.middlewares.secure-headers.headers.sslRedirect=true"
+        - "traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000"
+        - "traefik.http.middlewares.secure-headers.headers.contentSecurityPolicy=block-all-mixed-content"
+
+        # dashboard
+        - "traefik.http.routers.dashboard.rule=Host(`traefik.asmayshev.ru`)"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.services.dashboard.loadBalancer.server.port=80"
+        - "traefik.http.routers.dashboard.middlewares=secure-headers"
+        - "traefik.http.routers.dashboard.entryPoints=https"
+        - "traefik.http.routers.dashboard.tls=true"
+        - "traefik.http.routers.dashboard.tls.certResolver=letsEncrypt"
+        - "traefik.http.routers.dashboard.middlewares=basic-auth-global"
+        - "traefik.http.middlewares.basic-auth-global.basicauth.users=asmayshev:$$2y$$05$$jNcLOWxFw/JpdkYE3z5NZOETDkLFtLmhmMxcDyPj2OY8eQKIgUgRu"
+
+        - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+        - "traefik.http.routers.http-catchall.entrypoints=http"
+        - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
       placement:
         constraints: [node.role == manager]
 
