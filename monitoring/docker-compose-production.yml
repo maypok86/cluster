@@ -36,6 +36,23 @@ services:
       restart_policy:
         condition: on-failure
 
+  alertmanager:
+    image: prom/alertmanager
+    ports:
+      - 9093:9093
+    volumes:
+      - /home/deploy/configs/alertmanager/:/etc/alertmanager/
+    networks:
+      - monitoring-public
+    command:
+      --config.file=/etc/alertmanager/config.yml
+      --storage.path=/alertmanager
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+
 networks:
   traefik-public:
     external: true
