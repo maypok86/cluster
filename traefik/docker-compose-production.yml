@@ -3,17 +3,25 @@ services:
   cluster-traefik:
     image: traefik:2.8
     command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.watch=true"
-      - "--providers.docker.swarmMode=true"
-      - "--providers.docker.exposedByDefault=false"
-      - "--entryPoints.http.address=:80"
-      - "--entryPoints.https.address=:443"
-      - "--certificatesresolvers.letsEncrypt.acme.httpChallenge=true"
-      - "--certificatesresolvers.letsEncrypt.acme.httpChallenge.entryPoint=http"
-      - "--certificatesresolvers.letsEncrypt.acme.email=alex.mayshev.86@gmail.com"
-      - "--certificatesresolvers.letsEncrypt.acme.storage=/certs/acme.json"
+      --log=true
+      --log.level=INFO
+      --accesslog=true
+      --accesslog.filepath=/var/log/traefik/access.log
+      --accesslog.fields.headers.defaultmode=keep
+      --api=true
+      --api.dashboard=true
+      --metrics=true
+      --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      --providers.docker=true
+      --providers.docker.watch=true
+      --providers.docker.swarmMode=true
+      --providers.docker.exposedByDefault=false
+      --entryPoints.http.address=:80
+      --entryPoints.https.address=:443
+      --certificatesresolvers.letsEncrypt.acme.httpChallenge=true
+      --certificatesresolvers.letsEncrypt.acme.httpChallenge.entryPoint=http
+      --certificatesresolvers.letsEncrypt.acme.email=alex.mayshev.86@gmail.com
+      --certificatesresolvers.letsEncrypt.acme.storage=/certs/acme.json
     ports:
       - target: 80
         published: 80
@@ -23,43 +31,58 @@ services:
         published: 443
         protocol: tcp
         mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
     networks:
       - traefik-public
+      - monitoring-public
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-public-certs:/certs
+      - traefik-log:/var/log/traefik/
     deploy:
       labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=traefik-public"
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
 
-        - "traefik.http.middlewares.redirect-to-https.redirectScheme.scheme=https"
-        - "traefik.http.middlewares.redirect-to-https.redirectScheme.permanent=true"
+        - traefik.http.middlewares.redirect-to-https.redirectScheme.scheme=https
+        - traefik.http.middlewares.redirect-to-https.redirectScheme.permanent=true
 
-        - "traefik.http.middlewares.secure-headers.headers.sslRedirect=true"
-        - "traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000"
-        - "traefik.http.middlewares.secure-headers.headers.contentSecurityPolicy=block-all-mixed-content"
+        - traefik.http.middlewares.secure-headers.headers.sslRedirect=true
+        - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
+        - traefik.http.middlewares.secure-headers.headers.contentSecurityPolicy=block-all-mixed-content
 
         # dashboard
-        - "traefik.http.routers.dashboard.rule=Host(`traefik.asmayshev.ru`)"
-        - "traefik.http.routers.dashboard.service=api@internal"
-        - "traefik.http.services.dashboard.loadBalancer.server.port=80"
-        - "traefik.http.routers.dashboard.middlewares=secure-headers"
-        - "traefik.http.routers.dashboard.entryPoints=https"
-        - "traefik.http.routers.dashboard.tls=true"
-        - "traefik.http.routers.dashboard.tls.certResolver=letsEncrypt"
-        - "traefik.http.routers.dashboard.middlewares=basic-auth-global"
-        - "traefik.http.middlewares.basic-auth-global.basicauth.users=asmayshev:$$2y$$05$$jNcLOWxFw/JpdkYE3z5NZOETDkLFtLmhmMxcDyPj2OY8eQKIgUgRu"
+        - traefik.http.routers.dashboard.rule=Host(`traefik.asmayshev.ru`)
+        - traefik.http.routers.dashboard.service=api@internal
+        - traefik.http.services.dashboard.loadBalancer.server.port=80
+        - traefik.http.routers.dashboard.middlewares=secure-headers
+        - traefik.http.routers.dashboard.entryPoints=https
+        - traefik.http.routers.dashboard.tls=true
+        - traefik.http.routers.dashboard.tls.certResolver=letsEncrypt
+        - traefik.http.routers.dashboard.middlewares=basic-auth-global
+        - traefik.http.middlewares.basic-auth-global.basicauth.users=asmayshev:$$2y$$05$$jNcLOWxFw/JpdkYE3z5NZOETDkLFtLmhmMxcDyPj2OY8eQKIgUgRu
 
-        - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
-        - "traefik.http.routers.http-catchall.entrypoints=http"
-        - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+        - traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)
+        - traefik.http.routers.http-catchall.entrypoints=http
+        - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+      mode: global
       placement:
         constraints: [node.role == manager]
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
 
 networks:
   traefik-public:
     external: true
+  monitoring-public:
+    external: true
 
 volumes:
   traefik-public-certs:
+  traefik-log:
