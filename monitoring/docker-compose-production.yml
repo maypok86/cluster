@@ -1,22 +1,25 @@
 version: '3.9'
 services:
-  cluster-cadvisor:
+  cadvisor:
     image: gcr.io/cadvisor/cadvisor
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 8088:8080
     networks:
       - monitoring-public
     deploy:
       mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
       restart_policy:
         condition: on-failure
 
-  cluster-node-exporter:
+  node-exporter:
     image: prom/node-exporter
     volumes:
       - /proc:/host/proc:ro
@@ -27,22 +30,25 @@ services:
       - '--path.sysfs=/host/sys'
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    ports:
-      - 9100:9100
     networks:
       - monitoring-public
     deploy:
       mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
       restart_policy:
         condition: on-failure
 
   alertmanager:
     image: prom/alertmanager
-    ports:
-      - 9093:9093
     volumes:
       - /home/deploy/configs/alertmanager/:/etc/alertmanager/
     networks:
+      - default
+      - traefik-public
       - monitoring-public
     command:
       --config.file=/etc/alertmanager/config.yml
@@ -50,6 +56,54 @@ services:
     deploy:
       placement:
         constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.alertmanager.rule=Host(`alertmanager.asmayshev.ru`)
+        - traefik.http.services.alertmanager.loadBalancer.server.port=9093
+        - traefik.http.routers.alertmanager.middlewares=secure-headers
+        - traefik.http.routers.alertmanager.entryPoints=https
+        - traefik.http.routers.alertmanager.tls=true
+        - traefik.http.routers.alertmanager.tls.certResolver=letsEncrypt
+      restart_policy:
+        condition: on-failure
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - /home/deploy/configs/prometheus/:/etc/prometheus/
+      - prometheus-data:/prometheus
+    command:
+      --config.file=/etc/prometheus/prometheus.yml
+      --storage.tsdb.path=/prometheus
+      --web.console.libraries=/usr/share/prometheus/console_libraries
+      --web.console.templates=/usr/share/prometheus/consoles
+    networks:
+      - default
+      - traefik-public
+      - monitoring-public
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 128M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.prometheus.rule=Host(`prometheus.asmayshev.ru`)
+        - traefik.http.services.prometheus.loadBalancer.server.port=9090
+        - traefik.http.routers.prometheus.middlewares=secure-headers
+        - traefik.http.routers.prometheus.entryPoints=https
+        - traefik.http.routers.prometheus.tls=true
+        - traefik.http.routers.prometheus.tls.certResolver=letsEncrypt
       restart_policy:
         condition: on-failure
 
@@ -58,3 +112,6 @@ networks:
     external: true
   monitoring-public:
     external: true
+
+volumes:
+  prometheus-data:
