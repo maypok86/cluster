@@ -107,6 +107,42 @@ services:
       restart_policy:
         condition: on-failure
 
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - /home/deploy/configs/grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://grafana.asmayshev.ru
+    networks:
+      - default
+      - traefik-public
+      - monitoring-public
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.http.routers.grafana.rule=Host(`grafana.asmayshev.ru`)
+        - traefik.http.services.grafana.loadBalancer.server.port=3000
+        - traefik.http.routers.grafana.middlewares=secure-headers
+        - traefik.http.routers.grafana.entryPoints=https
+        - traefik.http.routers.grafana.tls=true
+        - traefik.http.routers.grafana.tls.certResolver=letsEncrypt
+      restart_policy:
+        condition: on-failure
+
 networks:
   traefik-public:
     external: true
@@ -115,3 +151,4 @@ networks:
 
 volumes:
   prometheus-data:
+  grafana-data:
